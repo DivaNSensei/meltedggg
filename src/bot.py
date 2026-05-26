@@ -7,8 +7,6 @@ import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import jdatetime
-from telethon import TelegramClient
-from telethon.sessions import StringSession
 
 load_dotenv()
 
@@ -17,6 +15,10 @@ API_HASH = os.getenv("API_HASH", "")
 TELETHON_SESSION = os.getenv("TELETHON_SESSION", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 CHAT_ID = os.getenv("CHAT_ID", "")
+
+# Importing Telethon components late to prevent initialization side-effects
+from telethon import TelegramClient
+from telethon.sessions import StringSession
 
 def sanitize_persian_text(text):
     """Converts Persian digits to English, removes commas, and strips layout stretch bars."""
@@ -136,7 +138,6 @@ async def scrape_telegram():
                 continue
             clean = sanitize_persian_text(msg.text)
             
-            # \D* looks for any number of non-digits (spaces, colons, symbols) between the text and the price
             match = re.search(r'نرخ تتر\D*(\d+)', clean)
             if match:
                 tether_val = float(match.group(1))
@@ -148,13 +149,23 @@ async def scrape_telegram():
     return ounce_val, iran_18k_val, dollar_val, tether_val
 
 def build_message(ounce, iran_18k, dollar, tether, emami, azadi, silver):
-    """Calculates bubble parameters and maps data to the mandatory layout format."""
+    """Calculates bubble metrics and renders them into the client's requested sleek format."""
     global_24k_toman = (ounce / 31.1034) * dollar if dollar else 0
     global_18k_toman = global_24k_toman * 0.75
     
-    bubble = 0.0
+    bubble_pct = 0.0
+    diff_val = 0.0
+    bubble_str = "0.00 ٪"
+    
     if global_18k_toman > 0:
-        bubble = ((iran_18k / global_18k_toman) * 100) - 100
+        bubble_pct = ((iran_18k / global_18k_toman) * 100) - 100
+        diff_val = iran_18k - global_18k_toman
+        
+        # Format label strings depending on whether the asset holds a premium or discount
+        if diff_val >= 0:
+            bubble_str = f"{bubble_pct:,.2f} ٪(مثبت {diff_val:,.0f} تومن)"
+        else:
+            bubble_str = f"منفی {abs(bubble_pct):,.2f} ٪(منفی {abs(diff_val):,.0f} تومن)"
 
     months = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", 
               "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"]
@@ -164,35 +175,25 @@ def build_message(ounce, iran_18k, dollar, tether, emami, azadi, silver):
 
     text = f"""نرخ لحظه‌ای ارز و طلا 
 ⏰ {date_str} - ساعت {time_str} 
-🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷 
- 
+
 🟣💱 شاخص‌های ارزی و جهانی
- 
 ▫️ اونس جهانی طلا (۲۴ عیار) : {ounce:,.2f} 💵 دلار 
 ▫️ قیمت دلار تهران : {dollar:,.0f} 💰 تومان 
 ▫️ قیمت تتر : {tether:,.0f} 💰 تومان 
- 
-🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷 
- 
+
 🟡🥇 طلا و نقره
- 
-▫️ قیمت طلای جهانی (۱۸ عیار) : {global_18k_toman:,.0f} 💰 تومان 
-▫️ قیمت هرگرم طلای ۱۸ عیار : {iran_18k:,.0f} 💰 تومان 
-▫️ درصد حباب طلا : {bubble:,.2f} ٪ 
+▫️ قیمت طلا بدون حباب : {global_18k_toman:,.0f} 💰 تومان 
+▫️ معامله هر گرم ۱۸ عیار در بازار: {iran_18k:,.0f} 💰 تومان 
+▫️   حباب طلا :  {bubble_str}
 ▫️ نقره ۹۹۹ : {silver:,.0f} 💰 تومان 
- 
-🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷 
- 
+
 🟢🪙 سکه
- 
 ▫️ سکه امامی : {emami:,.0f} 💰 تومان 
 ▫️ سکه بهار آزادی : {azadi:,.0f} 💰 تومان 
- 
-🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷🔷 
+
 آدرس: چهارطبقه ؛ بین امام خمینی ۲۲ و ۲۴
 روبروی جنت طلای آبشده مشهد
-0912-071-0390
-"""
+0912-071-0390"""
     return text
 
 def send_message(text):

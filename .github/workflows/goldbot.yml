@@ -2,8 +2,15 @@ name: Scheduled Live Market Scraper
 
 on:
   schedule:
-    # Runs every 15 minutes. (Be prepared for GitHub to randomly delay this)
-    - cron: '*/15 * * * *'
+    # 1. The Opening Bracket: Runs every 10 mins from 09:00 to 09:20 Tehran Time (05:30 to 05:50 UTC)
+    - cron: '30,40,50 5 * * 0,1,2,3,4,6'
+    
+    # 2. The Core Block: Runs every 10 mins from 09:30 to 16:20 Tehran Time (06:00 to 12:50 UTC)
+    - cron: '*/10 6-12 * * 0,1,2,3,4,6'
+    
+    # 3. The Closing Bracket: Runs every 10 mins from 16:30 to 17:00 Tehran Time (13:00 to 13:30 UTC)
+    - cron: '0,10,20,30 13 * * 0,1,2,3,4,6'
+
   workflow_dispatch: # Keeps your manual trigger button alive
 
 jobs:
