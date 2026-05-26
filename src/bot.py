@@ -1,5 +1,3 @@
-# filepath: src/bot.py
-
 import os
 import re
 import asyncio
@@ -7,6 +5,8 @@ import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import jdatetime
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 load_dotenv()
 
@@ -169,7 +169,14 @@ def build_message(ounce, iran_18k, dollar, tether, emami, azadi, silver):
 
     months = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", 
               "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"]
-    now = jdatetime.datetime.now()
+    
+    # Force localized Tehran timezone context explicitly inside python runtime
+    tehran_zone = ZoneInfo("Asia/Tehran")
+    gregorian_now = datetime.now(tehran_zone)
+    
+    # Convert localized Gregorian datetime elements directly into Jalali format
+    now = jdatetime.datetime.fromgregorian(datetime=gregorian_now)
+    
     date_str = f"{now.day} {months[now.month-1]} ماه {now.year}"
     time_str = now.strftime("%H:%M")
 
