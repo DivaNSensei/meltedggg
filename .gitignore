@@ -1,0 +1,17 @@
+# Python / Django secrets and cache
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+db.sqlite3
+media/
+
+# Node / React dependencies and builds
+node_modules/
+dist/
+build/
+.eslintcache
+
+# OS specific files (looking at you, Mac users)
+.DS_Store
+Thumbs.db
